@@ -4,6 +4,9 @@ import shutil
 import os
 
 from raw_features import RawFeatureExtraction
+
+
+
 '''
 Generate HHblits output file
 '''
@@ -44,3 +47,5 @@ if __name__ == "__main__":
     # Using batch_process_files() to process all file in the root dir
     root_dir = 'root dir with dataset'
     batch_process_files(root_dir)
+a=[]
+a.

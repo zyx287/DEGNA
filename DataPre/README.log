@@ -1,0 +1,4 @@
+Dataset: PDBbind, general without core
+Evolutional features
+Dynamic features
+data_generate.py: Generate the prepared files for features mentioned above. 

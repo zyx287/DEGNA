@@ -54,6 +54,7 @@ class TrainTest:
 
         if train:
             write_log(logger)
+            self.device = torch.device("cuda", self.local_rank)
 
             self.tr_bz = tr_bz
             self.train_data = BindingData(tr_bz, logger, fold_k)
@@ -61,7 +62,14 @@ class TrainTest:
             self.train_dataloader = DataLoader(dataset=self.train_data, batch_size=self.tr_bz, 
                                                shuffle=False)
         self.net = EGNA()
+
+        self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9, weight_decay=1e-3)
+        self.criterion = RegressionLoss()
         ## Load multi data 
+        ## Shared Variables
+        self.model_path = model_path
+        self.n_fea_types = 4
+        self.iter_num = 0
 
     def training(self, n_epoch, epoch_base):
         max_auc = 0
@@ -73,6 +81,32 @@ class TrainTest:
         begin_time = time()
 
         self.net.train()
+        training_loss_sum = 0
+        loss_history = torch.tensor([0, 0], dtype=torch.float16).to(self.device)
+        n_iter_per_epoch = 500
+        for i, data in enumerate(self.train_dataloader):
+            for j in range(self.n_fea_types):
+                data[j] = data[j].to(self.device)
+            predictions, labels = self.net(data[:self.n_fea_types-2],False)
+            self.optimizer.zero_grad()
+            loss = self.criterion(predictions, labels)
+            loss.backward()
+            training_loss_sum += float(loss.data)
+            self.optimizer.step()
+
+            if i % n_iter_per_epoch == n_iter_per_epoch - 1:
+                self.iter_num += n_iter_per_epoch
+                write_log(self.logger, "Epoch:{}, iteration: {}, current loss: {}".format(
+                    epoch, i + 1, training_loss_sum / n_iter_per_epoch))
+                loss_history[0] += training_loss_sum / float(n_iter_per_epoch)
+                loss_history[1] += 1.0
+                training_loss_sum = 0
+
+                end_time = time()
+                training_time = (end_time - begin_time) / 60
+                mean_loss = loss_history[0] / loss_history[1]
+                write_log(self.logger, "Training time for epoch {}: {:.2F} min".format(epoch, training_time))
+                return mean_loss
 
 
         

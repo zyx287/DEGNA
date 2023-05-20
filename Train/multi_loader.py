@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import torch
-from torch.utils.data import Dataset, dataloader
+from torch.utils.data import Dataset
 from typing import List, Tuple
 
 from data import *
@@ -38,4 +38,24 @@ def process_folder(folder_path: str, label_df: pd.DataFrame) -> Tuple[List, List
     label = label_df.loc[label_df['pdb_id'] == pdb_id, 'pkd']
 
     #Reture the features and label as a tuple
-    return label
+    return dataset.input_list, label
+
+def dataset_generator(data_folder_path: str, label_df_path: str):
+    '''
+    :parm data_folder_path: The path of ROOT dir of different PDBID named folder
+    :parm label_df_path: The path of index table contains pKd
+    :return: A Processed data for dataloder (MultiLoader)
+    '''
+    data_folder = data_folder_path
+    pdb_folders = glob.glob(os.path.join(data_folder, "*"))
+    label_df = pd.read_csv(label_df_path)
+
+    data_list = []
+
+    for pdb_folder in pdb_folders:
+        processed_data = process_folder(pdb_folder, label_df)
+        data_list.append(processed_data)
+    
+    dataset = MultiLoader(data_list)
+    
+    return dataset
